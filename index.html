@@ -1,0 +1,539 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="theme-color" content="#0F1115">
+    <title>AURION DS20 V3.0 | CLOUD SYNC</title>
+    <style>
+        /* --- CORE STYLE: INDUSTRIAL MATTE V3 --- */
+        :root {
+            --bg-deep: #0F1115;
+            --bg-panel: #1A1F24;
+            --amber-ops: #FFAB00;
+            --cyan-tech: #29B6F6;
+            --text-main: #ECEFF1;
+            --text-dim: rgba(236, 239, 241, 0.5);
+            --border-tech: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        * {
+            box-sizing: border-box;
+            user-select: none;
+            -webkit-tap-highlight-color: transparent;
+            font-family: 'Courier New', Courier, monospace;
+        }
+
+        body {
+            background-color: var(--bg-deep);
+            color: var(--text-main);
+            margin: 0;
+            padding: 20px;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            position: relative;
+        }
+
+        /* --- HEADER TÁTICO --- */
+        .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px; padding-bottom: 10px; }
+        .brand h1 { font-size: 26px; margin: 0; letter-spacing: 3px; font-weight: 900; }
+        .status-container { display: flex; align-items: center; background: rgba(255, 171, 0, 0.1); padding: 5px 10px; border-radius: 4px; border: 1px solid rgba(255, 171, 0, 0.3); }
+        .status-dot { width: 8px; height: 8px; background-color: var(--amber-ops); border-radius: 50%; display: inline-block; margin-right: 8px; box-shadow: 0 0 8px var(--amber-ops); animation: blink 1.5s infinite; }
+        @keyframes blink { 0% { opacity: 1; } 50% { opacity: 0.4; } 100% { opacity: 1; } }
+        .status-text { color: var(--amber-ops); font-size: 10px; letter-spacing: 1px; font-weight: bold; }
+
+        /* --- ABAS DE NAVEGAÇÃO --- */
+        .tabs { display: flex; margin-bottom: 20px; border-bottom: 2px solid var(--bg-panel); }
+        .tab-button { background: transparent; border: none; color: var(--text-dim); padding: 10px 15px; cursor: pointer; font-size: 13px; font-weight: bold; letter-spacing: 1px; border-bottom: 3px solid transparent; transition: all 0.2s; }
+        .tab-button.active { color: var(--text-main); border-bottom: 3px solid var(--amber-ops); }
+
+        /* --- DASHBOARD --- */
+        .dashboard { flex: 1; background: linear-gradient(145deg, #1e2329, #16191d); border-radius: 16px; border: var(--border-tech); padding: 20px; display: flex; flex-direction: column; box-shadow: 0 20px 50px rgba(0,0,0,0.6); overflow-y: auto; }
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+        
+        .section-title { font-size: 11px; color: var(--text-dim); letter-spacing: 2px; margin-bottom: 15px; display: flex; align-items: center; }
+        .section-title::before { content: ''; width: 3px; height: 12px; background: var(--amber-ops); margin-right: 8px; }
+
+        /* --- NODES --- */
+        .node-card { background: rgba(0,0,0,0.25); border-radius: 8px; padding: 18px; margin-bottom: 15px; display: flex; justify-content: space-between; align-items: center; border-left: 5px solid var(--text-dim); text-decoration: none; transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1); cursor: pointer; }
+        .node-lumen { border-left-color: var(--cyan-tech); }
+        .node-lovart { border-left-color: #B470FF; }
+        .node-gpt { border-left-color: #10A37F; }
+        .node-grok { border-left-color: var(--amber-ops); } 
+
+        .node-info { display: flex; flex-direction: column; }
+        .node-name { font-size: 16px; font-weight: bold; color: var(--text-main); letter-spacing: 1px; }
+        .node-role { font-size: 9px; color: var(--text-dim); margin-top: 4px; }
+        .node-status { font-size: 10px; font-weight: bold; padding: 4px 8px; border-radius: 4px; background: rgba(0,0,0,0.3); }
+        .st-ready { color: var(--cyan-tech); border: 1px solid rgba(41, 182, 246, 0.3); }
+        .st-vis { color: #B470FF; border: 1px solid rgba(180, 112, 255, 0.3); }
+        .st-log { color: #10A37F; border: 1px solid rgba(16, 163, 127, 0.3); }
+        .st-video { color: var(--amber-ops); border: 1px solid rgba(255, 171, 0, 0.3); }
+
+        /* --- MEMORY & SLOTS (CLOUD) --- */
+        .memory-slot {
+            background: rgba(0,0,0,0.2);
+            padding: 12px;
+            border-radius: 6px;
+            border: 1px dashed rgba(255, 255, 255, 0.1);
+            margin-bottom: 10px;
+            font-size: 12px;
+            color: var(--text-main);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .slot-actions button {
+            background: none;
+            border: 1px solid var(--amber-ops);
+            color: var(--amber-ops);
+            padding: 3px 6px;
+            border-radius: 4px;
+            margin-left: 5px;
+            font-size: 10px;
+            cursor: pointer;
+        }
+        .slot-actions button:hover { background: var(--amber-ops); color: #000; }
+
+        /* --- CHAT FLUTUANTE --- */
+        #floating-chat-btn { position: fixed; bottom: 30px; right: 30px; width: 55px; height: 55px; background: var(--cyan-tech); border-radius: 50%; display: flex; justify-content: center; align-items: center; box-shadow: 0 4px 15px rgba(41, 182, 246, 0.5); transition: transform 0.2s; cursor: pointer; z-index: 1000; }
+        #floating-chat-btn:active { transform: scale(0.9); }
+        #floating-chat-btn svg { fill: #000; width: 25px; height: 25px; }
+
+        /* --- LOADING INDICATOR --- */
+        #loading-overlay {
+            position: absolute; top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(15, 17, 21, 0.95);
+            display: flex; flex-direction: column; justify-content: center; align-items: center;
+            z-index: 1001; transition: opacity 0.3s;
+        }
+        .loader { border: 4px solid var(--bg-panel); border-top: 4px solid var(--amber-ops); border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite; margin-bottom: 15px; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        #auth-status { font-size: 12px; color: var(--text-dim); }
+    </style>
+    <!-- Imports do Firebase -->
+    <script type="module">
+        // Importa os módulos necessários do Firebase
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, doc, onSnapshot, collection, query, setDoc, addDoc, deleteDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { setLogLevel } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+
+        setLogLevel('Debug');
+        
+        // --- VARIÁVEIS CRÍTICAS DO AMBIENTE ---
+        // Estas variáveis são injetadas pelo ambiente Canvas. Se for no GitHub Pages, serão NULL, e a Memória será LOCAL.
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'AURION_DS20_FALLBACK';
+        const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : null;
+        const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
+
+        let app, db, auth, userId = null;
+        let isAuthReady = false;
+        let isCloudReady = false;
+
+        // Exporta funções para o escopo global (para uso no HTML)
+        window.loadMemorySlots = loadMemorySlots;
+        window.addMemorySlot = addMemorySlot;
+        window.deleteMemorySlot = deleteMemorySlot;
+        window.copyToClipboard = copyToClipboard;
+        window.runSync = runSync;
+        window.openTab = openTab;
+        window.isCloudReady = isCloudReady; // Exporta o status da nuvem
+
+        // --- FUNÇÕES DE AUTENTICAÇÃO E INICIALIZAÇÃO ---
+
+        async function initFirebase() {
+            const statusElement = document.getElementById('auth-status');
+            
+            // Fallback para ambiente GitHub Pages ou local (sem chaves de nuvem)
+            if (!firebaseConfig) {
+                statusElement.innerText = "ALERTA: Configuração Cloud Ausente. Usando Memória Local.";
+                document.getElementById('loading-overlay').style.opacity = '0';
+                setTimeout(() => document.getElementById('loading-overlay').style.display = 'none', 300);
+                loadLocalMemorySlots(); 
+                isAuthReady = true;
+                return;
+            }
+
+            try {
+                app = initializeApp(firebaseConfig);
+                auth = getAuth(app);
+                db = getFirestore(app);
+
+                statusElement.innerText = "Status: Conectando à Nuvem...";
+
+                // Tenta autenticar
+                if (initialAuthToken) {
+                    await signInWithCustomToken(auth, initialAuthToken);
+                } else {
+                    await signInAnonymously(auth);
+                }
+
+                // Listener de estado de autenticação
+                onAuthStateChanged(auth, (user) => {
+                    if (user) {
+                        userId = user.uid;
+                        isAuthReady = true;
+                        isCloudReady = true;
+                        window.isCloudReady = true;
+
+                        statusElement.innerText = `Status: ONLINE (Cloud). ID: ${userId.substring(0, 8)}...`;
+                        
+                        // Após autenticação, carrega os dados
+                        loadMemorySlots();
+                    } else {
+                        statusElement.innerText = "ALERTA: Autenticação Cloud Falhou. Memória Local (Backup).";
+                        isAuthReady = true;
+                        loadLocalMemorySlots(); // Em caso de falha de autenticação
+                    }
+                    document.getElementById('loading-overlay').style.opacity = '0';
+                    setTimeout(() => document.getElementById('loading-overlay').style.display = 'none', 300);
+                });
+
+            } catch (error) {
+                console.error("Erro na inicialização do Firebase:", error);
+                statusElement.innerText = `ERRO CRÍTICO: Configuração Falhou.`;
+            }
+        }
+        
+        // --- FUNÇÕES DE MEMÓRIA (Firestore Cloud) ---
+        function getMemoryCollectionRef() {
+            if (!db || !userId) {
+                console.error("ERRO: Banco de dados ou UserId não está pronto.");
+                return null;
+            }
+            // Caminho para dados PRIVADOS do usuário
+            const path = `artifacts/${appId}/users/${userId}/aurion_memories`;
+            return collection(db, path);
+        }
+        
+        function loadMemorySlots() {
+            if (!isCloudReady || !db || !userId) return;
+
+            const q = query(getMemoryCollectionRef());
+            const container = document.getElementById('memory-slots');
+            container.innerHTML = '<p style="font-size:10px; color:var(--text-dim); text-align:center;">Carregando Memórias da Nuvem...</p>';
+            
+            // onSnapshot: escuta mudanças em tempo real
+            onSnapshot(q, (snapshot) => {
+                container.innerHTML = '';
+                if (snapshot.empty) {
+                     container.innerHTML = '<p style="font-size:10px; color:var(--text-dim); text-align:center; margin-top:20px;">Nenhuma memória salva na Nuvem.</p>';
+                     return;
+                }
+                
+                snapshot.docs.forEach(doc => {
+                    const slot = doc.data();
+                    const docId = doc.id;
+                    const slotDiv = createMemorySlot(slot.name, slot.content, docId, true);
+                    container.appendChild(slotDiv);
+                });
+            }, (error) => {
+                 console.error("Erro ao carregar memórias da nuvem:", error);
+                 container.innerHTML = '<p style="font-size:10px; color:red; text-align:center;">ERRO DE NUVEM: Falha ao carregar dados.</p>';
+            });
+        }
+        
+        async function addMemorySlot() {
+            if (!isCloudReady || !db || !userId) {
+                alert("Aguarde a conexão do sistema Cloud ou use a versão local.");
+                return;
+            }
+            const name = document.getElementById('new-mem-name').value.trim();
+            const content = document.getElementById('new-mem-content').value.trim();
+
+            if (!name || !content) return alert("Nome e Conteúdo são obrigatórios.");
+
+            try {
+                await addDoc(getMemoryCollectionRef(), { name, content, createdAt: serverTimestamp() });
+                document.getElementById('new-mem-name').value = '';
+                document.getElementById('new-mem-content').value = '';
+            } catch (error) {
+                console.error("Erro ao adicionar memória na nuvem:", error);
+                alert("Falha ao salvar a memória na nuvem. Verifique as regras de segurança.");
+            }
+        }
+
+        async function deleteMemorySlot(event, docId) {
+            if (event) event.stopPropagation();
+            if (!isCloudReady || !db || !userId) return;
+            try {
+                await deleteDoc(doc(getMemoryCollectionRef(), docId));
+            } catch (error) {
+                console.error("Erro ao deletar memória na nuvem:", error);
+                alert("Falha ao deletar a memória na nuvem.");
+            }
+        }
+        
+        // --- FUNÇÕES DE MEMÓRIA (Local Storage Fallback) ---
+        const LOCAL_MEMORY_KEY = 'aurion_memory_slots_v2';
+
+        function loadLocalMemorySlots() {
+            const slots = JSON.parse(localStorage.getItem(LOCAL_MEMORY_KEY) || '[]');
+            const container = document.getElementById('memory-slots');
+            container.innerHTML = '';
+            
+            if (slots.length === 0) {
+                 container.innerHTML = '<p style="font-size:10px; color:var(--text-dim); text-align:center; margin-top:20px;">Nenhuma memória salva localmente.</p>';
+                 return;
+            }
+
+            slots.forEach((slot, index) => {
+                const slotDiv = createMemorySlot(slot.name, slot.content, index, false);
+                container.appendChild(slotDiv);
+            });
+        }
+        
+        function addLocalMemorySlot() {
+            const name = document.getElementById('new-mem-name').value.trim();
+            const content = document.getElementById('new-mem-content').value.trim();
+
+            if (!name || !content) return alert("Nome e Conteúdo são obrigatórios.");
+
+            const slots = JSON.parse(localStorage.getItem(LOCAL_MEMORY_KEY) || '[]');
+            slots.push({ name, content });
+            localStorage.setItem(LOCAL_MEMORY_KEY, JSON.stringify(slots));
+
+            document.getElementById('new-mem-name').value = '';
+            document.getElementById('new-mem-content').value = '';
+            loadLocalMemorySlots();
+        }
+
+        function deleteLocalMemorySlot(event, index) {
+             if (event) event.stopPropagation();
+             let slots = JSON.parse(localStorage.getItem(LOCAL_MEMORY_KEY) || '[]');
+             slots.splice(index, 1);
+             localStorage.setItem(LOCAL_MEMORY_KEY, JSON.stringify(slots));
+             loadLocalMemorySlots();
+        }
+
+        // --- WIDGET HELPER ---
+        function createMemorySlot(name, content, id, isCloud) {
+            const slotDiv = document.createElement('div');
+            slotDiv.className = 'memory-slot';
+            // Use o 'id' (que é docId para cloud ou index para local) na função de exclusão
+            const deleteHandler = isCloud ? `deleteMemorySlot(event, '${id}')` : `deleteLocalMemorySlot(event, ${id})`;
+            
+            slotDiv.innerHTML = `
+                <span title="${content}">${name}</span>
+                <div class="slot-actions">
+                    <button onclick="copyToClipboard(event, '${content.replace(/'/g, "\\'")}')">COPIAR</button>
+                    <button style="border-color:#d32f2f; color:#d32f2f;" onclick="this.parentElement.parentElement.remove(); ${deleteHandler}">DEL</button>
+                </div>
+            `;
+            return slotDiv;
+        }
+
+
+        // Inicialização do Firebase na janela
+        window.addEventListener('load', initFirebase);
+
+    </script>
+</head>
+<body>
+
+    <!-- OVERLAY DE CARREGAMENTO -->
+    <div id="loading-overlay">
+        <div class="loader"></div>
+        <div id="auth-status">Status: Inicializando Agentes...</div>
+    </div>
+
+    <!-- CHAT FLUTUANTE -->
+    <a id="floating-chat-btn" href="https://gemini.google.com" target="_blank" title="Chat com LUMEN">
+        <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M7 8H17V9H7V8ZM7 11H14V12H7V11ZM19 3H5C3.89 3 3 3.9 3 5V19C3 20.1 3.89 21 5 21H16L21 23V5C21 3.9 20.1 3 19 3Z" fill="#000"/>
+        </svg>
+    </a>
+
+    <!-- CABEÇALHO -->
+    <div class="header">
+        <div class="brand">
+            <h1>AURION<span style="font-size:12px; opacity:0.7; margin-left:2px;">OS</span></h1>
+        </div>
+        <div class="status-container">
+            <span class="status-dot"></span>
+            <span class="status-text" id="header-status">QUADRA-AGENTE</span>
+        </div>
+    </div>
+    
+    <!-- ABAS DE NAVEGAÇÃO -->
+    <div class="tabs">
+        <button class="tab-button active" onclick="openTab(event, 'core-nodes')">CORE</button>
+        <button class="tab-button" onclick="openTab(event, 'memory')">MEMÓRIA</button>
+        <button class="tab-button" onclick="openTab(event, 'telemetry')">TELEMETRIA</button>
+    </div>
+
+    <!-- PAINEL CENTRAL COM ABAS -->
+    <div class="dashboard">
+
+        <!-- CONTEÚDO DA ABA: CORE NODES (Com Grok) -->
+        <div id="core-nodes" class="tab-content active">
+            <div class="section-title">QUADRA-AGENTE STATUS</div>
+
+            <a href="https://gemini.google.com" target="_blank" class="node-card node-lumen">
+                <div class="node-info">
+                    <span class="node-name">LUMEN</span>
+                    <span class="node-role">CENTRAL INTELLIGENCE</span>
+                </div>
+                <span class="node-status st-ready">ONLINE</span>
+            </a>
+
+            <a href="https://www.lovart.ai" target="_blank" class="node-card node-lovart">
+                <div class="node-info">
+                    <span class="node-name">LOVART</span>
+                    <span class="node-role">VISUAL ENGINE</span>
+                </div>
+                <span class="node-status st-vis">READY</span>
+            </a>
+
+            <a href="https://chat.openai.com" target="_blank" class="node-card node-gpt">
+                <div class="node-info">
+                    <span class="node-name">GPT NODE</span>
+                    <span class="node-role">LOGIC & TEXT</span>
+                </div>
+                <span class="node-status st-log">STANDBY</span>
+            </a>
+            
+            <a href="https://grok.com" target="_blank" class="node-card node-grok">
+                <div class="node-info">
+                    <span class="node-name">GROK NODE</span>
+                    <span class="node-role">CINEMATOGRAFIA & VÍDEO</span>
+                </div>
+                <span class="node-status st-video">AGUARDANDO ATIVAÇÃO</span>
+            </a>
+
+            <button class="sync-btn" onclick="runSync()" style="margin-top:20px;">SYSTEM CHECK</button>
+        </div>
+
+        <!-- CONTEÚDO DA ABA: MEMÓRIA (Cloud Sync ou Local Fallback) -->
+        <div id="memory" class="tab-content">
+            <div class="section-title">SLOTS DE MEMÓRIA (SINCRONIZAÇÃO)</div>
+            
+            <p style="font-size:10px; color:var(--text-dim); margin-bottom:15px;">Clique para COPIAR o comando para o NODO. (Modo: <span id="memory-mode-label">Local</span>)</p>
+
+            <div id="memory-slots">
+                <!-- Memórias carregadas pelo Firebase ou Local Storage -->
+            </div>
+            
+            <input type="text" id="new-mem-name" placeholder="Nome da Memória" style="width:100%; padding:10px; margin-top:15px; background:rgba(0,0,0,0.3); border:var(--border-tech); color:var(--text-main); border-radius:4px;">
+            <textarea id="new-mem-content" placeholder="Conteúdo do Comando (Prompt)" style="width:100%; padding:10px; margin-top:10px; height:80px; background:rgba(0,0,0,0.3); border:var(--border-tech); color:var(--text-main); border-radius:4px;"></textarea>
+            <button class="sync-btn" onclick="addMemorySlotOrLocal()" style="background:#10A37F; margin-top:10px;">+ SALVAR COMANDO (AUTOMÁTICO)</button>
+        </div>
+
+        <!-- CONTEÚDO DA ABA: TELEMETRIA -->
+        <div id="telemetry" class="tab-content">
+            <div class="section-title">DIAGNÓSTICO DA REDE</div>
+            
+            <div class="telemetry-panel">
+                <div class="bar-wrapper">
+                    <div class="bar-header"><span>NEURAL SYNC</span><span id="txt-sync">0%</span></div>
+                    <div class="track"><div class="fill fill-amber" id="bar-sync"></div></div>
+                </div>
+
+                <div class="bar-wrapper">
+                    <div class="bar-header"><span>BANDWIDTH</span><span id="txt-band">0%</span></div>
+                    <div class="track"><div class="fill fill-cyan" id="bar-band"></div></div>
+                </div>
+                
+                <p style="font-size:10px; color:var(--text-dim); margin-top:20px;">Protocolo: CDF / Criptografia: AURION-Q-130578</p>
+                <p style="font-size:10px; color:var(--text-dim);">Latência média: 15ms</p>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        // --- FUNÇÃO PARA LIDAR COM BOTÃO DE SALVAR ---
+        function addMemorySlotOrLocal() {
+            if (window.isCloudReady) {
+                addMemorySlot(); // Tenta salvar na nuvem
+            } else {
+                addLocalMemorySlot(); // Salva localmente
+            }
+        }
+
+        // --- FUNÇÕES DE INTERFACE (Mantidas) ---
+        function openTab(evt, tabName) {
+            let i, tabcontent, tablinks;
+            tabcontent = document.getElementsByClassName("tab-content");
+            for (i = 0; i < tabcontent.length; i++) {
+                tabcontent[i].style.display = "none";
+            }
+            tablinks = document.getElementsByClassName("tab-button");
+            for (i = 0; i < tablinks.length; i++) {
+                tablinks[i].className = tablinks[i].className.replace(" active", "");
+            }
+            document.getElementById(tabName).style.display = "block";
+            evt.currentTarget.className += " active";
+        }
+
+        function setVal(barId, txtId, val) {
+            const bar = document.getElementById(barId);
+            const txt = document.getElementById(txtId);
+            if (bar) bar.style.width = val + '%';
+            if (txt) txt.innerText = val + '%';
+        }
+
+        function runSync() {
+            const btn = document.querySelector('.sync-btn');
+            const original = btn.innerText;
+            btn.innerText = "PROCESSANDO...";
+            btn.style.background = "#ECEFF1"; 
+            
+            setVal('bar-sync', 'txt-sync', 0);
+            setVal('bar-band', 'txt-band', 0);
+            
+            setTimeout(() => {
+                setVal('bar-sync', 'txt-sync', 100);
+                setVal('bar-band', 'txt-band', 98);
+                btn.innerText = "TODOS OS SISTEMAS ATIVOS";
+                btn.style.background = "#FFAB00";
+                
+                // Atualiza o modo de memória na Telemetria
+                const mode = document.getElementById('memory-mode-label');
+                if (mode) mode.innerText = window.isCloudReady ? "Cloud (Firestore)" : "Local (Browser)";
+
+            }, 800);
+
+            setTimeout(() => {
+                btn.innerText = original;
+            }, 2500);
+        }
+
+        function copyToClipboard(event, text) {
+             event.stopPropagation();
+             const tempInput = document.createElement('textarea');
+             tempInput.value = text;
+             document.body.appendChild(tempInput);
+             tempInput.select();
+             document.execCommand('copy');
+             document.body.removeChild(tempInput);
+             
+             const button = event.target;
+             const originalText = button.innerText;
+             button.innerText = 'COPIADO!';
+             setTimeout(() => {
+                 button.innerText = originalText;
+             }, 800);
+        }
+        
+        // --- INICIALIZAÇÃO DA UI ---
+        window.onload = () => {
+            document.getElementById('core-nodes').style.display = 'block';
+            setVal('bar-sync', 'txt-sync', 100);
+            setVal('bar-band', 'txt-band', 94);
+            
+            // Inicializa a Memória (que faz o fallback)
+            if (window.initFirebase) {
+                window.initFirebase();
+            } else {
+                loadLocalMemorySlots(); 
+            }
+        };
+    </script>
+</body>
+</html>
+
